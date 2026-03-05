@@ -1,2 +1,1 @@
-# myself-shot
-# 0w0
+Author: ChatGPT 5.2 thinking & 5.3 instant.
