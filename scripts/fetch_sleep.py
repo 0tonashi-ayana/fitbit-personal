@@ -1,3 +1,4 @@
+import base64
 import os, json, datetime
 import requests
 
@@ -8,16 +9,73 @@ REFRESH_TOKEN = os.environ["FITBIT_REFRESH_TOKEN"]
 TOKEN_URL = "https://api.fitbit.com/oauth2/token"
 SLEEP_URL = "https://api.fitbit.com/1.2/user/-/sleep/date/{date}.json"
 
+def update_github_secret(secret_name, value):
+    repo = os.environ["GITHUB_REPOSITORY"]
+    token = os.environ["GH_SECRET_TOKEN"]
+
+    url = f"https://api.github.com/repos/{repo}/actions/secrets/{secret_name}"
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json"
+    }
+
+    # 先获取 public key
+    key_resp = requests.get(
+        f"https://api.github.com/repos/{repo}/actions/secrets/public-key",
+        headers=headers,
+        timeout=30
+    )
+    key_resp.raise_for_status()
+    key_data = key_resp.json()
+
+    from nacl import encoding, public
+
+    public_key = public.PublicKey(
+        key_data["key"].encode(),
+        encoding.Base64Encoder()
+    )
+
+    sealed_box = public.SealedBox(public_key)
+
+    encrypted = base64.b64encode(
+        sealed_box.encrypt(value.encode())
+    ).decode()
+
+    payload = {
+        "encrypted_value": encrypted,
+        "key_id": key_data["key_id"]
+    }
+
+    r = requests.put(url, headers=headers, json=payload, timeout=30)
+    r.raise_for_status()
+
 def refresh_access_token():
-    # Fitbit token endpoint uses HTTP Basic with client_id:client_secret
-    import base64
-    basic = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
-    headers = {"Authorization": f"Basic {basic}",
-               "Content-Type": "application/x-www-form-urlencoded"}
-    data = {"grant_type": "refresh_token", "refresh_token": REFRESH_TOKEN}
+    basic = base64.b64encode(
+        f"{CLIENT_ID}:{CLIENT_SECRET}".encode()
+    ).decode()
+
+    headers = {
+        "Authorization": f"Basic {basic}",
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    data = {
+        "grant_type": "refresh_token",
+        "refresh_token": REFRESH_TOKEN
+    }
+
     r = requests.post(TOKEN_URL, headers=headers, data=data, timeout=30)
     r.raise_for_status()
-    return r.json()
+
+    tok = r.json()
+
+    # 自动更新 refresh token
+    new_refresh = tok.get("refresh_token")
+    if new_refresh:
+        update_github_secret("FITBIT_REFRESH_TOKEN", new_refresh)
+
+    return tok
 
 def get_sleep(access_token: str, date_str: str):
     r = requests.get(
