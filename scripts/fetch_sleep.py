@@ -112,30 +112,30 @@ def main():
     tok = refresh_access_token()
     access = tok["access_token"]
 
-    # try today then yesterday (local date handling is Fitbit-side; we just ask)
     today = datetime.date.today()
     candidates = [today, today - datetime.timedelta(days=1)]
 
-best = None
-best_payload = None
-best_date = None
+    best = None
+    best_payload = None
+    best_date = None
 
-for d in candidates:
-    payload = get_sleep(access, d.isoformat())
-    s = pick_main_sleep(payload)
-    if s:
-        best = summarize(s)
-        best_payload = payload
-        best_date = d.isoformat()
-        break
+    for d in candidates:
+        payload = get_sleep(access, d.isoformat())
+        s = pick_main_sleep(payload)
+        if s:
+            best = summarize(s)
+            best_payload = payload
+            best_date = d.isoformat()
+            break
 
-if not best:
-    best = {"status": "no_main_sleep_found_yet", "checked": [c.isoformat() for c in candidates]}
+    if not best:
+        best = {"status": "no_main_sleep_found_yet",
+                "checked": [c.isoformat() for c in candidates]}
+        write_docs(best)
+        return
+
     write_docs(best)
-    return
-
-write_docs(best)
-write_raw(best_date, best_payload)
+    write_raw(best_date, best_payload)
 
 if __name__ == "__main__":
     main()
