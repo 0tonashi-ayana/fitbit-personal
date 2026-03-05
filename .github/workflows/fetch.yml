@@ -12,12 +12,21 @@ permissions:
   contents: write
 
 jobs:
-  run:
+  fetch:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+    env:
+      FITBIT_CLIENT_ID: ${{ secrets.FITBIT_CLIENT_ID }}
+      FITBIT_CLIENT_SECRET: ${{ secrets.FITBIT_CLIENT_SECRET }}
+      FITBIT_REFRESH_TOKEN: ${{ secrets.FITBIT_REFRESH_TOKEN }}
+      GH_SECRET_TOKEN: ${{ secrets.GH_SECRET_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
