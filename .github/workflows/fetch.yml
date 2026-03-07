@@ -43,13 +43,30 @@ jobs:
         run: pip install requests pynacl
 
       - name: Fetch sleep and update docs
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.send_test_email != 'true' }}
         env:
           FITBIT_CLIENT_ID: ${{ secrets.FITBIT_CLIENT_ID }}
           FITBIT_CLIENT_SECRET: ${{ secrets.FITBIT_CLIENT_SECRET }}
           FITBIT_REFRESH_TOKEN: ${{ secrets.FITBIT_REFRESH_TOKEN }}
         run: python scripts/fetch_sleep.py
         
+      - name: Build sleep emails
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.send_test_email != 'true' }}
+        run: python scripts/make_sleep_email.py
+
+      - name: Build test email
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.send_test_email == 'true' }}
+        run: python scripts/make_test_sleep_email.py
+
+      - name: Send sleep emails
+        env:
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: python scripts/send_sleep_emails.py
+
       - name: Push raw to private repo
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.send_test_email != 'true' }}
         env:
           RAW_REPO_TOKEN: ${{ secrets.RAW_REPO_TOKEN }}
         run: |
@@ -66,6 +83,7 @@ jobs:
           git push
           
       - name: Commit changes (if any)
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.send_test_email != 'true' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
