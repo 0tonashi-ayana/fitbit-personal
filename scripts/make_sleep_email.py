@@ -10,7 +10,13 @@ SYDNEY_TZ = ZoneInfo("Australia/Sydney")
 def _parse_iso(value: str) -> datetime:
     if value.endswith("Z"):
         value = value[:-1] + "+00:00"
-    return datetime.fromisoformat(value)
+
+    dt = datetime.fromisoformat(value)
+    if dt.tzinfo is None:
+        # Fitbit often returns naive local timestamps; treat them as Sydney-local.
+        dt = dt.replace(tzinfo=SYDNEY_TZ)
+
+    return dt
 
 
 def _to_sydney_iso(value: str) -> str:
