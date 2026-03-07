@@ -6,7 +6,16 @@ on:
     - cron: "*/15 21-23 * * *"
     # every 15 minutes during 00:00-01:59 UTC (≈ 11:00-12:59 AEDT)
     - cron: "*/15 0-1 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      send_test_email:
+        description: "Send a test email (no Fitbit data required)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
 permissions:
   contents: write
